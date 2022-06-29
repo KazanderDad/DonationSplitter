@@ -24,7 +24,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
  * to run tests before sending real value to this contract.
  */
 contract PaymentSplitter {
-    event PayeeAdded(address account, uint256 shares);
+    event PayeeAdded(address account, uint256 count, bytes32 name, uint256 shares, bytes32 targetChain, bytes32 targetWallet);
     event PaymentReleased(address to, uint256 amount);
     event ERC20PaymentReleased(IERC20 indexed token, address to, uint256 amount);
     event PaymentReceived(address from, uint256 amount);
@@ -211,6 +211,34 @@ contract PaymentSplitter {
     }
 
     /**
+     * @dev Getter for the amount of payee's full information, including releasable Ether.
+     */
+    function info(address account) public view returns (bytes32, uint256, bytes32, bytes32, uint256) {
+        uint256 totalReceived = address(this).balance + totalReleased();
+        return (
+            _payeeName[account],
+            _shares[account],
+            _targetChain[account],
+            _targetWallet[account],
+            _pendingPayment(account, totalReceived, released(account)));
+    }
+
+    /**
+     * @dev Getter for the amount of payee's full information, including releasable Ether.
+     */
+    function infoByID(uint256 ID) public view returns (bytes32, uint256, bytes32, bytes32, uint256) {
+        address _recipientX = _payeeCountToPayeeAddress[ID];
+        uint256 totalReceived = address(this).balance + totalReleased();
+
+        return (
+            _payeeName[_recipientX],
+            _shares[_recipientX],
+            _targetChain[_recipientX],
+            _targetWallet[_recipientX],
+            _pendingPayment(_recipientX, totalReceived, released(_recipientX)));
+    }
+
+    /**
      * @dev Getter to find the ID number of the last added recipient, which is also 
      * the total count of recipients.
      */
@@ -338,6 +366,6 @@ contract PaymentSplitter {
         _totalShares = _totalShares + shares_;
         _payees2.push(_payeeCount);
         _payeeCountToPayeeAddress[_payeeCount] = account;
-        emit PayeeAdded(account, shares_);
+        emit PayeeAdded(account, _payeeCount, payeeName_, shares_, targetChain_, targetWallet_);
     }
 }
